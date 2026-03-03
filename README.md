@@ -1,4 +1,5 @@
 
+
 ```markdown
 # 🤖 RAG Knowledge Assistant
 
@@ -22,6 +23,37 @@ A production-ready Retrieval-Augmented Generation (RAG) pipeline built with Lang
 
 This RAG system implements a two-stage architecture: **Ingestion** and **Retrieval/Generation**.
 
+```mermaid
+flowchart TB
+    subgraph Ingestion["📥 Data Ingestion Pipeline"]
+        direction TB
+        F["📄 File Upload"] -->|"message"| S["✂️ Split Text"]
+        S -->|"dataframe"| A["🗄️ Astra DB Vector Store"]
+    end
+
+    subgraph Retrieval["🔍 Retrieval and Augmentation"]
+        direction TB
+        C["💬 Chat Input"] -->|"search_query"| AS["🗄️ Astra DB Vector Search"]
+        AS -->|"dataframe"| TC["🔄 Type Converter"]
+        TC -->|"message"| P["📝 Prompt Template"]
+        C -->|"message"| P
+    end
+
+    subgraph Generation["⚡ Generation"]
+        direction TB
+        P -->|"prompt"| G["🤖 Groq LLM llama-3.3-70b"]
+        G -->|"text_output"| CO["📤 Chat Output"]
+    end
+
+    A -.->|"stores vectors"| AS
+    Retrieval --> Generation
+
+    style Ingestion fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    style Retrieval fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style Generation fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+```
+
+---
 
 ## 🔧 Pipeline Components
 
