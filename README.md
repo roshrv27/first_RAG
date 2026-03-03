@@ -1,3 +1,4 @@
+
 ```markdown
 # 🤖 RAG Knowledge Assistant
 
@@ -25,25 +26,25 @@ This RAG system implements a two-stage architecture: **Ingestion** and **Retriev
 flowchart TB
     subgraph Ingestion["📥 Data Ingestion Pipeline"]
         direction TB
-        File["📄 File Upload"] -->|message| Split["✂️ Split Text"]
-        Split -->|dataframe| AstraIngest["🗄️ Astra DB<br/>Vector Store"]
+        F["📄 File Upload"] -->|"message"| S["✂️ Split Text"]
+        S -->|"dataframe"| A["🗄️ Astra DB Vector Store"]
     end
 
-    subgraph Retrieval["🔍 Retrieval & Augmentation"]
+    subgraph Retrieval["🔍 Retrieval and Augmentation"]
         direction TB
-        ChatIn["💬 Chat Input"] -->|search_query| AstraSearch["🗄️ Astra DB<br/>Vector Search"]
-        AstraSearch -->|dataframe| Converter["🔄 Type Converter"]
-        Converter -->|message_output| Prompt["📝 Prompt Template"]
-        ChatIn -->|message| Prompt
+        C["💬 Chat Input"] -->|"search_query"| AS["🗄️ Astra DB Vector Search"]
+        AS -->|"dataframe"| TC["🔄 Type Converter"]
+        TC -->|"message"| P["📝 Prompt Template"]
+        C -->|"message"| P
     end
 
     subgraph Generation["⚡ Generation"]
         direction TB
-        Prompt -->|prompt| LLM["🤖 Groq LLM<br/>llama-3.3-70b"]
-        LLM -->|text_output| ChatOut["📤 Chat Output"]
+        P -->|"prompt"| G["🤖 Groq LLM llama-3.3-70b"]
+        G -->|"text_output"| CO["📤 Chat Output"]
     end
 
-    Ingestion -.->|stores vectors| AstraSearch
+    A -.->|"stores vectors"| AS
     Retrieval --> Generation
 
     style Ingestion fill:#e1f5ff,stroke:#01579b,stroke-width:2px
@@ -59,8 +60,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    A[File Component<br/>Read File] -->|"message<br/>(Raw Content)"| B[Split Text]
-    B -->|"dataframe<br/>(Chunks)"| C[Astra DB<br/>Vector Store]
+    A["📄 File Component"] -->|"message (Raw Content)"| B["✂️ Split Text"]
+    B -->|"dataframe (Chunks)"| C["🗄️ Astra DB Vector Store"]
     
     style A fill:#fff3e0,stroke:#ef6c00
     style B fill:#f3e5f5,stroke:#6a1b9a
@@ -77,11 +78,11 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A[Chat Input<br/>User Question] --> B{Astra DB<br/>Vector Search}
-    B -->|Search Results<br/>DataFrame| C[Type Converter]
-    C -->|Message Output| D[Prompt Template]
-    A -->|User Question| D
-    D -->|Formatted Prompt| E[Groq Model]
+    A["💬 Chat Input"] --> B{"🗄️ Astra DB Vector Search"}
+    B -->|"Search Results (DataFrame)"| C["🔄 Type Converter"]
+    C -->|"Message Output"| D["📝 Prompt Template"]
+    A -->|"User Question"| D
+    D -->|"Formatted Prompt"| E["🤖 Groq Model"]
     
     style A fill:#e8f5e9,stroke:#2e7d32
     style B fill:#e3f2fd,stroke:#1565c0
@@ -94,15 +95,15 @@ flowchart TD
 |-----------|---------|---------|
 | **Chat Input** | Receives user queries | Session management enabled |
 | **Astra DB Search** | Semantic + Hybrid search | Returns top 10 relevant chunks |
-| **Type Converter** | DataFrame → Message | Converts search results to text format |
+| **Type Converter** | DataFrame to Message | Converts search results to text format |
 | **Prompt Template** | Context assembly | Injects context + question into template |
 
 ### 3. Generation Phase
 
 ```mermaid
 flowchart LR
-    A[Prompt Template<br/>Context + Question] -->|input_value| B[Groq Model<br/>llama-3.3-70b]
-    B -->|text_output| C[Chat Output<br/>Final Response]
+    A["📝 Prompt Template"] -->|"input_value"| B["🤖 Groq Model llama-3.3-70b"]
+    B -->|"text_output"| C["📤 Chat Output"]
     
     style A fill:#f3e5f5,stroke:#6a1b9a
     style B fill:#fce4ec,stroke:#c2185b
@@ -117,46 +118,46 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant File as File Component
-    participant Split as Split Text
-    participant Astra as Astra DB
+    participant U as User
+    participant F as File Component
+    participant S as Split Text
+    participant A as Astra DB
     
-    User->>File: Upload Document(s)
-    File->>File: Parse content (PDF/DOCX/TXT)
-    File->>Split: Raw text content
-    Split->>Split: Chunk into 500char segments<br/>with 150char overlap
-    Split->>Astra: DataFrame of chunks
-    Astra->>Astra: Generate embeddings<br/>(NVIDIA nv-embedqa-e5-v5)
-    Astra->>Astra: Store in vector collection<br/>'langflow_rv'
+    U->>F: Upload Document(s)
+    F->>F: Parse content (PDF/DOCX/TXT)
+    F->>S: Raw text content
+    S->>S: Chunk into 500char segments with 150char overlap
+    S->>A: DataFrame of chunks
+    A->>A: Generate embeddings (NVIDIA nv-embedqa-e5-v5)
+    A->>A: Store in vector collection 'langflow_rv'
 ```
 
 ### Query Flow (Runtime)
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant ChatIn as Chat Input
-    participant Astra as Astra DB Search
-    participant Converter as Type Converter
-    participant Prompt as Prompt Template
+    participant U as User
+    participant CI as Chat Input
+    participant AS as Astra DB Search
+    participant TC as Type Converter
+    participant PT as Prompt Template
     participant LLM as Groq LLM
-    participant ChatOut as Chat Output
+    participant CO as Chat Output
     
-    User->>ChatIn: Ask question
-    ChatIn->>Astra: Search query (Message)
-    Astra->>Astra: Embed query +<br/>Hybrid search (Vector + Lexical)
-    Astra->>Astra: Rerank results<br/>(nvidia/llama-3.2-nv-rerankqa)
-    Astra->>Converter: Top 10 chunks (DataFrame)
-    Converter->>Converter: Convert DataFrame →<br/>Message text
-    Converter->>Prompt: context_block
-    ChatIn->>Prompt: user_question
-    Prompt->>Prompt: Template:<br/>Context: {context}<br/>Question: {question}
-    Prompt->>LLM: Formatted prompt (User Message)
-    Note over LLM: System Message:<br/>(Instructions + Rules)
-    LLM->>LLM: Generate response<br/>with citations [^index^]
-    LLM->>ChatOut: Generated Message
-    ChatOut->>User: Display response
+    U->>CI: Ask question
+    CI->>AS: Search query (Message)
+    AS->>AS: Embed query + Hybrid search
+    AS->>AS: Rerank results (nvidia/llama-3.2-nv-rerankqa)
+    AS->>TC: Top 10 chunks (DataFrame)
+    TC->>TC: Convert DataFrame to Message text
+    TC->>PT: context_block
+    CI->>PT: user_question
+    PT->>PT: Template - Context and Question
+    PT->>LLM: Formatted prompt (User Message)
+    Note over LLM: System Message with Instructions
+    LLM->>LLM: Generate response with citations
+    LLM->>CO: Generated Message
+    CO->>U: Display response
 ```
 
 ---
@@ -179,7 +180,7 @@ Question: {user_question}
 |-----------|-------|-------------|
 | **Model** | `llama-3.3-70b-versatile` | High-performance LLM for RAG |
 | **Temperature** | 0.1 | Low creativity, high factuality |
-| **Max Tokens** | - | Model default (adjust as needed) |
+| **Max Tokens** | Default | Model default (adjust as needed) |
 | **Tool Models** | Enabled | For future agent capabilities |
 
 ### Astra DB Configuration
@@ -203,7 +204,7 @@ The system message provides strict instructions for the AI assistant. **Importan
 <details>
 <summary>Click to expand full System Message</summary>
 
-```markdown
+```
 You are a helpful AI assistant with access to a specialized knowledge base. Your task is to answer user questions based STRICTLY on the provided context documents in the user message.
 
 ## CORE RULES
